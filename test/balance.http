@@ -1,7 +1,10 @@
-# HTTP/1.1
-GET /balance HTTP/1.1
+# Get balance for non-existing account
+
+GET /balance?account_id=1234
 Host: localhost:4567
-Accept: application/json
 
-### 
+###
 
+# balance for existing account
+GET /balance?account_id=100
+Host: localhost:4567
