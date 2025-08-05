@@ -1,42 +1,67 @@
-# Sinatra MongoDB API Template
+--
+# Reset state before starting tests
 
-This template provides a minimal setup for building an API with [Sinatra](http://sinatrarb.com/) and MongoDB. It includes Docker configuration so the app and database can be run with a single command.
+POST /reset
 
-## Features
+200 OK
 
-- Simple Sinatra application structure
-- MongoDB connection using the official Ruby driver
-- Ready to run with Docker and Docker Compose
 
-## Getting Started
+--
+# Get balance for non-existing account
 
-### Running with Docker
+GET /balance?account_id=1234
 
-1. Build and start the services:
-   ```bash
-   docker compose up --build
-   ```
-2. The API will be available at [http://localhost:4567](http://localhost:4567).
+404 0
 
-### Running locally
 
-1. Install Ruby (3.1 or newer) and Bundler.
-2. Install dependencies:
-   ```bash
-   bundle install
-   ```
-3. Ensure MongoDB is running and accessible. The default connection string is `mongodb://localhost:27017/mydb`. Override it by setting the `MONGO_URL` environment variable.
-4. Start the app:
-   ```bash
-   bundle exec ruby app.rb
-   ```
+--
+# Create account with initial balance
 
-## Sample Endpoints
+POST /event {"type":"deposit", "destination":"100", "amount":10}
 
-- `GET /` - health check endpoint.
-- `GET /items` - list items from MongoDB.
-- `POST /items` - create a new item. Send JSON in the request body.
+201 {"destination": {"id":"100", "balance":10}}
 
-## License
 
-This project is released under the [MIT License](LICENSE).
+--
+# Deposit into existing account
+
+POST /event {"type":"deposit", "destination":"100", "amount":10}
+
+201 {"destination": {"id":"100", "balance":20}}
+
+
+--
+# Get balance for existing account
+
+GET /balance?account_id=100
+
+200 20
+
+--
+# Withdraw from non-existing account
+
+POST /event {"type":"withdraw", "origin":"200", "amount":10}
+
+404 0
+
+--
+# Withdraw from existing account
+
+POST /event {"type":"withdraw", "origin":"100", "amount":5}
+
+201 {"origin": {"id":"100", "balance":15}}
+
+--
+# Transfer from existing account
+
+POST /event {"type":"transfer", "origin":"100", "amount":15, "destination":"300"}
+
+201 {"origin": {"id":"100", "balance":0}, "destination": {"id":"300", "balance":15}}
+
+--
+# Transfer from non-existing account
+
+POST /event {"type":"transfer", "origin":"200", "amount":15, "destination":"300"}
+
+404 0
+
