@@ -1,6 +1,5 @@
 source 'https://rubygems.org'
 
-gem 'mongo'
 gem 'puma'
 gem 'rackup'
 gem 'sinatra'

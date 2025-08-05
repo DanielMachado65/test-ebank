@@ -1,0 +1,7 @@
+# HTTP/1.1
+GET /balance HTTP/1.1
+Host: localhost:4567
+Accept: application/json
+
+### 
+

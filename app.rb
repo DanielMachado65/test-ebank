@@ -1,41 +1,53 @@
+# frozen_string_literal: true
+
 require 'sinatra'
-require 'mongo'
 require 'json'
-require 'pry'
+require_relative 'lib/application/ledger'
 
-# Establish MongoDB connection
-MONGO_URL = ENV.fetch('MONGO_URL', 'mongodb://localhost:27017/mydb')
-DB = Mongo::Client.new(MONGO_URL)
-
-# Define the Sinatra application
+# Handles HTTP endpoints for EBANX assignment using a ledger for business logic.
 class App < Sinatra::Base
-  get '/' do
-    'Sinatra MongoDB API'
+  set :bind, '0.0.0.0'
+  configure { set :ledger, Ledger.new }
+
+  post '/reset' do
+    settings.ledger.reset
+    status 200
+    'OK'
   end
 
-  get '/items' do
-    content_type :json
-    docs = DB[:items].find.map { |d| d.merge('_id' => d['_id'].to_s) }
-    docs.to_json
-  end
-
-  post '/items' do
-    content_type :json
-    body = request.body.read
-    halt 400, { error: 'Empty body' }.to_json if body.strip.empty?
-
-    begin
-      data = JSON.parse(body)
-    rescue JSON::ParserError
-      halt 400, { error: 'Invalid JSON' }.to_json
+  get '/balance' do
+    balance = settings.ledger.balance(params['account_id'])
+    if balance
+      balance.to_s
+    else
+      status 404
+      '0'
     end
+  end
 
-    halt 400, { error: 'Expected an array of objects' }.to_json unless data.is_a?(Array)
+  post '/event' do
+    content_type :json
+    data = JSON.parse(request.body.read)
 
-    result = DB[:items].insert_many(data)
-    status 201
-    { ids: result.inserted_ids.map(&:to_s) }.to_json
+    result = case data['type']
+             when 'deposit'
+               settings.ledger.deposit(data['destination'], data['amount'].to_i)
+             when 'withdraw'
+               settings.ledger.withdraw(data['origin'], data['amount'].to_i)
+             when 'transfer'
+               settings.ledger.transfer(data['origin'], data['destination'], data['amount'].to_i)
+             else
+               halt 400, { error: 'Invalid event type' }.to_json
+             end
+
+    if result
+      status 201
+      result.to_json
+    else
+      status 404
+      '0'
+    end
   end
 end
 
-App.run! if __FILE__ == $0
+App.run! if __FILE__ == $PROGRAM_NAME
