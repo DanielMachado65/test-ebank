@@ -2,12 +2,22 @@
 
 require 'sinatra'
 require 'json'
+require 'rack/protection'
 require_relative 'lib/application/ledger'
 
-# Handles HTTP endpoints for EBANX assignment using a ledger for business logic.
 class App < Sinatra::Base
   set :bind, '0.0.0.0'
+
+  configure :development do
+    set :host_authorization, permitted_hosts: [
+      '.localhost', '.test', '127.0.0.1', '::1',
+      '.ngrok-free.app'
+    ]
+  end
+
   configure { set :ledger, Ledger.new }
+
+  get('/') { 'EBANX Assignment API' }
 
   post '/reset' do
     settings.ledger.reset
